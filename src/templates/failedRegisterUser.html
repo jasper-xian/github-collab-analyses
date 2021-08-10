@@ -1,0 +1,34 @@
+<!doctype html>
+
+
+<head><title>Register</title>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}"> 
+    <meta charset=utf-8> </head>
+    <body>
+        <h1>GitHub Collaborator Analyses</h1>
+        <h3>Register</h3>
+        <label for="login">Registered? Login here:</label> <button name="login"><a href="{{ url_for('login') }}">Login</a></button>
+
+        <form name="signup_form" method="POST">
+
+            <label for="username">Username</label>
+            <input type="text" name="username" class="field" required>
+
+            <!-- <label for="email">Email</label>
+            <input type="email" name="email" class="field" required> -->
+
+            <label for="password">Password</label>
+            <input type="password" name="password" class="field" required>
+
+            <label for="tokenName">Github Token Name</label>
+            <input type="text" name="tokenName" class="field" required>
+
+            <label for="token">GitHub Access Token</label>
+            <input type="password" name="token" class="field" required>
+    
+            <input type="submit" value="Sign Up" class="btn">
+          
+          </form>
+        
+        <p style="color: red;">This username is already taken or there is an illegal character in your username (no /). Please try again.</p>
+    </body>

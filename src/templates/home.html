@@ -1,0 +1,13 @@
+<!doctype html>
+
+
+<head><title>Home</title>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}"> 
+    <meta charset=utf-8> </head>
+    <body>
+        <h1>Home</h1>
+        <button name="addRepo"><a href="{{ url_for('changeRepos', username=username) }}">Add, Update, or Delete Repository</a></button>
+        <button name="fileSearch"><a href="{{ url_for('selectRepo', username=username) }}">Search for Files Within Your Repositories</a></button>
+        <button name="fileSearch"><a href="{{ url_for('changeTokens', username=username) }}">Add or Remove an Access Token</a></button>
+        <button name="fileSearch"><a href="{{ url_for('logout') }}">Logout</a></button>
+    </body>

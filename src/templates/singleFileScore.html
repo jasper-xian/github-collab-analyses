@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<head><title>File {{ filename }} in {{ login }}/{{ repoOnly }}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}"> 
+    <meta charset=utf-8> </head>
+    <body>
+        <button><a href="{{ url_for('home', username=username) }}">Home</a></button>
+        <button><a href="{{ url_for('selectRepo', username=username) }}">Change Repository</a></button>
+        <button><a href="{{ url_for('fileSearch', username=username, login=login, repoOnly=repoOnly) }}">Change Filename</a></button>
+        <br>
+        <h3> {{ filename }} </h3>
+        <img src="{{ url_for('singleFileScoreChart', username=username, login=login, repoOnly=repoOnly) }}" alt="Image Placeholder" height="500">
+    </body>

@@ -1,0 +1,30 @@
+<!doctype html>
+
+
+<head><title>Change Tokens</title>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}"> 
+    <meta charset=utf-8> </head>
+    <body>
+        <button name="home"><a href="{{ url_for('home', username=username) }}">Home</a></button>
+        <h3>Add a Token</h3>
+        <form method="POST">
+
+            <label for="tokenName">Token Name</label>
+            <input type="text" name="tokenName" class="field" required>
+
+            <label for="tokenValue">Token Value</label>
+            <input type="password" name="tokenValue" class="field" required>
+    
+            <input type="submit" name = "add" value="Add" class="btn">
+          
+          </form>
+        <h3>Remove a Token</h3>
+        <form method="POST">
+            <select name= "removeToken" method="POST">
+                {% for name in tokenNames %}
+                    <option value= "{{name}}" SELECTED>{{name}}</option>"
+                {% endfor %}
+            </select>
+            <input type="submit" name = "remove" value="Remove" class="btn">
+        </form>
+    </body>
