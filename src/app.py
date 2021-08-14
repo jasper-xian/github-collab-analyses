@@ -9,14 +9,19 @@ from repoAnalysis import GitAnalysis
 from mongoHelpers import *
 from githubHelpers import *
 from graphs import *
+from celery import Celery
 
 app = Flask(__name__)
 myGitAnalysis = GitAnalysis()
 
 app.config["MONGO_DBNAME"] = "mydb"
 app.config["MONGO_URI"] = "mongodb+srv://read-write:github-collab-analysis@cluster0.2g2n0.mongodb.net/mydb?retryWrites=true&w=majority"
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 
 mongo = PyMongo(app)
+celery = Celery(app.name, backend=app.config['CELERY_RESULT_BACKEND'], broker=app.config['CELERY_BROKER_URL'])
+#celery.conf.update(app.config)
 
 #Will be replaced with vaulted password soon
 cryptoKey = "replacablebluehyenaspwd"
@@ -105,6 +110,17 @@ def registerPOST():
 def home(username):
   return render_template('home.html', username=username)
 
+@celery.task
+def addRepo(repoName, token):
+  users = mongo.db.users
+  myGitAnalysis.setG(token=token)
+  myGitAnalysis.clearFileDict()
+  myGitAnalysis.setRepoName(repoName)
+  myGitAnalysis.authorsPerFileCommits()
+  myGitAnalysis.authorsPerFilePulls()
+  data = {"repoName": repoName, "pickledFileDict": myGitAnalysis.pickledFileDict()}
+  users.update_one({"username": session['username']}, {"$push": {"fileDicts": data}})
+
 @app.route('/<username>/repositories')
 @loginRequired
 def changeRepos(username):
@@ -132,14 +148,8 @@ def changeReposPOST(username):
     if token is None or repoName in repoNames:
       return render_template('failedChangeRepo.html', username=username, repoNames=repoNames)
     else:
-      myGitAnalysis.setG(token=token)
-      myGitAnalysis.clearFileDict()
-      myGitAnalysis.setRepoName(repoName=repoName)
-      myGitAnalysis.authorsPerFileCommits()
-      myGitAnalysis.authorsPerFilePulls()
-      data = {"repoName": repoName, "pickledFileDict": myGitAnalysis.pickledFileDict()}
-      users.update_one({"username": session['username']}, {"$push": {"fileDicts": data}})
-      return redirect(url_for('home', username=username))
+      addRepo.apply_async(args=[repoName, token])
+      return render_template('addingRepo.html', username=username, repoNames=repoNames)
   elif 'update' in request.form:
     repoName = request.form['updateRepo']
     token = repoReachableToken(repoName=repoName, tokens=userTokens)
