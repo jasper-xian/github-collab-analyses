@@ -1,5 +1,5 @@
 from io import BytesIO, StringIO
-from flask import Flask, render_template, url_for, request, session, redirect, Blueprint
+from flask import Flask, render_template, url_for, request, session, redirect, Blueprint, jsonify
 from functools import wraps
 from flask.helpers import send_file
 from flask_pymongo import PyMongo
@@ -9,6 +9,7 @@ from repoAnalysis import GitAnalysis
 from mongoHelpers import *
 from githubHelpers import *
 from graphs import *
+from flask_executor import Executor
 
 app = Flask(__name__)
 myGitAnalysis = GitAnalysis()
@@ -17,6 +18,7 @@ app.config["MONGO_DBNAME"] = "mydb"
 app.config["MONGO_URI"] = "mongodb+srv://read-write:github-collab-analysis@cluster0.2g2n0.mongodb.net/mydb?retryWrites=true&w=majority"
 
 mongo = PyMongo(app)
+executor = Executor(app)
 
 #Will be replaced with vaulted password soon
 cryptoKey = "replacablebluehyenaspwd"
@@ -105,6 +107,26 @@ def registerPOST():
 def home(username):
   return render_template('home.html', username=username)
 
+@executor.job
+def addRepo(repoName, token):
+  users = mongo.db.users
+  myGitAnalysis.setG(token=token)
+  myGitAnalysis.clearFileDict()
+  myGitAnalysis.setRepoName(repoName=repoName)
+  myGitAnalysis.authorsPerFileCommits()
+  myGitAnalysis.authorsPerFilePulls()
+  data = {"repoName": repoName, "pickledFileDict": myGitAnalysis.pickledFileDict()}
+  users.update_one({"username": session['username']}, {"$push": {"fileDicts": data}})
+  return "Adding"
+
+@app.route('/<username>/repositories/progress')
+def addRepoProgress(username):
+  if not executor.futures.done('addRepo'):
+    future_status = executor.futures._state('addRepo')
+    return "Progress"
+  future = executor.futures.pop('addRepo')
+  return "Done"
+
 @app.route('/<username>/repositories')
 @loginRequired
 def changeRepos(username):
@@ -132,14 +154,10 @@ def changeReposPOST(username):
     if token is None or repoName in repoNames:
       return render_template('failedChangeRepo.html', username=username, repoNames=repoNames)
     else:
-      myGitAnalysis.setG(token=token)
-      myGitAnalysis.clearFileDict()
-      myGitAnalysis.setRepoName(repoName=repoName)
-      myGitAnalysis.authorsPerFileCommits()
-      myGitAnalysis.authorsPerFilePulls()
-      data = {"repoName": repoName, "pickledFileDict": myGitAnalysis.pickledFileDict()}
-      users.update_one({"username": session['username']}, {"$push": {"fileDicts": data}})
-      return redirect(url_for('home', username=username))
+      #executor.submit_stored('addRepo', addRepo, repoName=repoName, token=token)
+      future = executor.submit(addRepo, repoName=repoName, token=token)
+      print(future.result(), file=open("output.txt", "a"))
+      return redirect(url_for('addRepoProgress', username=username))
   elif 'update' in request.form:
     repoName = request.form['updateRepo']
     token = repoReachableToken(repoName=repoName, tokens=userTokens)
